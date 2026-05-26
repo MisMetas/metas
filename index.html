@@ -53,6 +53,13 @@ body{
   margin-top:14px;
   box-shadow:0 8px 24px rgba(15,23,42,.08);
 }
+.auth-card{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
 .stat{
   background:white;
   border-radius:20px;
@@ -139,12 +146,14 @@ button{
 }
 .primary{flex:1;background:var(--primary);color:white}
 .secondary{background:#e5e7eb;color:#111827}
+.danger{background:#fee2e2;color:#991b1b}
 .quote{
   background:#f8fafc;
   border-left:5px solid var(--primary);
   padding:12px;
   border-radius:14px;
 }
+.hidden{display:none}
 @media(max-width:620px){
   .grid{grid-template-columns:1fr 1fr}
 }
@@ -159,62 +168,107 @@ button{
     <p>Dashboard, hábitos, espiritualidad, trabajo, ejercicio y vida personal.</p>
   </div>
 
-  <div class="card">
-    <label>Selecciona el día</label>
-    <input id="date" type="date">
+  <div id="authArea" class="card auth-card">
+    <div>
+      <strong>Conecta tu cuenta</strong>
+      <p class="small">Inicia sesión para guardar y sincronizar tu agenda con Firebase.</p>
+    </div>
+    <button class="primary" onclick="login()">Entrar con Google</button>
   </div>
 
-  <div class="grid">
-    <div class="stat">
-      <h2 id="todayPercent">0%</h2>
-      <p>Progreso de hoy</p>
+  <div id="mainApp" class="hidden">
+    <div class="card">
+      <label>Selecciona el día</label>
+      <input id="date" type="date">
     </div>
-    <div class="stat">
-      <h2 id="streak">0</h2>
-      <p>Días consecutivos</p>
-    </div>
-    <div class="stat">
-      <h2 id="weekPercent">0%</h2>
-      <p>Promedio semanal</p>
-    </div>
-    <div class="stat">
-      <h2 id="monthDays">0</h2>
-      <p>Días registrados este mes</p>
-    </div>
-  </div>
 
-  <div class="card">
-    <div class="category-title">
-      <strong>Progreso del día</strong>
-      <span id="percent" class="badge">0%</span>
+    <div class="grid">
+      <div class="stat">
+        <h2 id="todayPercent">0%</h2>
+        <p>Progreso de hoy</p>
+      </div>
+      <div class="stat">
+        <h2 id="streak">0</h2>
+        <p>Días consecutivos</p>
+      </div>
+      <div class="stat">
+        <h2 id="weekPercent">0%</h2>
+        <p>Promedio semanal</p>
+      </div>
+      <div class="stat">
+        <h2 id="monthDays">0</h2>
+        <p>Días registrados este mes</p>
+      </div>
     </div>
-    <br>
-    <div class="progress"><div id="bar"></div></div>
-  </div>
 
-  <div class="card">
-    <strong>Calendario visual</strong>
-    <p class="small">Verde = completo, amarillo = parcial, rojo = bajo progreso.</p>
-    <div id="calendar" class="calendar"></div>
-  </div>
+    <div class="card">
+      <div class="category-title">
+        <strong>Progreso del día</strong>
+        <span id="percent" class="badge">0%</span>
+      </div>
+      <br>
+      <div class="progress"><div id="bar"></div></div>
+    </div>
 
-  <div class="card">
-    <strong>Resumen inteligente</strong>
-    <div id="smartSummary" class="quote small"></div>
-  </div>
+    <div class="card">
+      <strong>Calendario visual</strong>
+      <p class="small">Verde = completo, amarillo = parcial, rojo = bajo progreso.</p>
+      <div id="calendar" class="calendar"></div>
+    </div>
 
-  <div id="sections"></div>
+    <div class="card">
+      <strong>Resumen inteligente</strong>
+      <div id="smartSummary" class="quote small"></div>
+    </div>
+
+    <div id="sections"></div>
+  </div>
 
 </div>
 
-<div class="actions">
+<div id="actions" class="actions hidden">
   <div class="actions-inner">
-    <button class="secondary" onclick="clearDay()">Limpiar</button>
+    <button class="danger" onclick="clearDay()">Limpiar</button>
     <button class="primary" onclick="saveDay()">Guardar día</button>
   </div>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import {
+  getFirestore,
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  deleteDoc
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBI-2EQplJRk6cWFJThAAoufRIHRC_JZcs",
+  authDomain: "mi-agenda-98180.firebaseapp.com",
+  projectId: "mi-agenda-98180",
+  storageBucket: "mi-agenda-98180.firebasestorage.app",
+  messagingSenderId: "743868873377",
+  appId: "1:743868873377:web:1677551c8eb514b5d28ee0",
+  measurementId: "G-JDWEJXC0M1"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+let currentUser = null;
+let allEntries = {};
+
 const categories = [
   { id:'habitos', title:'Hábitos personales', placeholder:'Agua, lectura, orden, disciplina...' },
   { id:'espiritual', title:'Desarrollo espiritual', placeholder:'Oración, lectura bíblica, reflexión...' },
@@ -230,24 +284,88 @@ const sections = document.getElementById('sections');
 const bar = document.getElementById('bar');
 const percent = document.getElementById('percent');
 
+window.login = async function(){
+  try{
+    await signInWithPopup(auth, provider);
+  }catch(error){
+    alert("No se pudo iniciar sesión: " + error.message);
+  }
+};
+
+window.logout = async function(){
+  await signOut(auth);
+};
+
+onAuthStateChanged(auth, async user => {
+  currentUser = user;
+
+  if(user){
+    document.getElementById("authArea").innerHTML = `
+      <div>
+        <strong>Cuenta conectada</strong>
+        <p class="small">${user.email}</p>
+      </div>
+      <button class="secondary" onclick="logout()">Cerrar sesión</button>
+    `;
+    document.getElementById("mainApp").classList.remove("hidden");
+    document.getElementById("actions").classList.remove("hidden");
+
+    dateInput.value = dateInput.value || today();
+    await loadAllEntries();
+    render();
+  }else{
+    allEntries = {};
+    document.getElementById("mainApp").classList.add("hidden");
+    document.getElementById("actions").classList.add("hidden");
+    document.getElementById("authArea").innerHTML = `
+      <div>
+        <strong>Conecta tu cuenta</strong>
+        <p class="small">Inicia sesión para guardar y sincronizar tu agenda con Firebase.</p>
+      </div>
+      <button class="primary" onclick="login()">Entrar con Google</button>
+    `;
+  }
+});
+
 function today(){
   return new Date().toISOString().slice(0,10);
 }
-function key(date){
-  return 'agenda_' + date;
-}
+
 function getData(date){
-  return JSON.parse(localStorage.getItem(key(date)) || '{}');
+  return allEntries[date] || {};
 }
-function saveData(date,data){
-  localStorage.setItem(key(date), JSON.stringify(data));
+
+async function saveData(date,data){
+  if(!currentUser){
+    alert("Primero inicia sesión con Google.");
+    return;
+  }
+
+  const ref = doc(db, "users", currentUser.uid, "entries", date);
+  await setDoc(ref, data, { merge:true });
+  allEntries[date] = data;
 }
+
+async function loadAllEntries(){
+  if(!currentUser) return;
+
+  allEntries = {};
+  const ref = collection(db, "users", currentUser.uid, "entries");
+  const snap = await getDocs(ref);
+
+  snap.forEach(item => {
+    allEntries[item.id] = item.data();
+  });
+}
+
 function getPercent(date){
   const data = getData(date);
   let done = 0;
+
   categories.forEach(c => {
     if(data[c.id]?.done) done++;
   });
+
   return Math.round((done / categories.length) * 100);
 }
 
@@ -259,10 +377,10 @@ function render(){
     <div class="card">
       <div class="category-title">
         <label>${cat.title}</label>
-        <input 
-          type="checkbox" 
-          id="check_${cat.id}" 
-          ${saved[cat.id]?.done ? 'checked' : ''} 
+        <input
+          type="checkbox"
+          id="check_${cat.id}"
+          ${saved[cat.id]?.done ? 'checked' : ''}
           onchange="updateProgress()"
           style="width:auto"
         >
@@ -276,7 +394,12 @@ function render(){
   renderCalendar();
 }
 
-function saveDay(){
+window.saveDay = async function(){
+  if(!currentUser){
+    alert("Primero inicia sesión con Google.");
+    return;
+  }
+
   const data = {};
   categories.forEach(cat => {
     data[cat.id] = {
@@ -286,17 +409,21 @@ function saveDay(){
   });
 
   data.savedAt = new Date().toISOString();
-  saveData(dateInput.value, data);
 
-  updateProgress();
-  updateDashboard();
-  renderCalendar();
+  try{
+    await saveData(dateInput.value, data);
+    updateProgress();
+    updateDashboard();
+    renderCalendar();
+    alert('Día guardado correctamente en Firebase.');
+  }catch(error){
+    alert("No se pudo guardar: " + error.message);
+  }
+};
 
-  alert('Día guardado correctamente.');
-}
-
-function updateProgress(){
+window.updateProgress = function(){
   let done = 0;
+
   categories.forEach(cat => {
     const check = document.getElementById('check_' + cat.id);
     if(check && check.checked) done++;
@@ -306,14 +433,25 @@ function updateProgress(){
   bar.style.width = value + '%';
   percent.textContent = value + '%';
   document.getElementById('todayPercent').textContent = value + '%';
-}
+};
 
-function clearDay(){
-  if(confirm('¿Quieres borrar la información de este día?')){
-    localStorage.removeItem(key(dateInput.value));
-    render();
+window.clearDay = async function(){
+  if(!currentUser){
+    alert("Primero inicia sesión con Google.");
+    return;
   }
-}
+
+  if(confirm('¿Quieres borrar la información de este día?')){
+    try{
+      const ref = doc(db, "users", currentUser.uid, "entries", dateInput.value);
+      await deleteDoc(ref);
+      delete allEntries[dateInput.value];
+      render();
+    }catch(error){
+      alert("No se pudo borrar: " + error.message);
+    }
+  }
+};
 
 function updateDashboard(){
   const selected = dateInput.value;
@@ -323,18 +461,19 @@ function updateDashboard(){
   document.getElementById('streak').textContent = calculateStreak();
   document.getElementById('weekPercent').textContent = calculateWeekAverage(selected) + '%';
   document.getElementById('monthDays').textContent = countMonthEntries(selected);
-
   document.getElementById('smartSummary').innerHTML = makeSummary(selected);
 }
 
 function calculateWeekAverage(date){
   const base = new Date(date + 'T00:00:00');
   let total = 0;
+
   for(let i = 0; i < 7; i++){
     const d = new Date(base);
     d.setDate(base.getDate() - i);
     total += getPercent(d.toISOString().slice(0,10));
   }
+
   return Math.round(total / 7);
 }
 
@@ -347,10 +486,11 @@ function calculateStreak(){
     if(getPercent(iso) >= 60){
       streak++;
       d.setDate(d.getDate() - 1);
-    } else {
+    }else{
       break;
     }
   }
+
   return streak;
 }
 
@@ -358,8 +498,8 @@ function countMonthEntries(date){
   const month = date.slice(0,7);
   let count = 0;
 
-  Object.keys(localStorage).forEach(k => {
-    if(k.startsWith('agenda_' + month)){
+  Object.keys(allEntries).forEach(entryDate => {
+    if(entryDate.startsWith(month)){
       count++;
     }
   });
@@ -421,7 +561,6 @@ function renderCalendar(){
 }
 
 dateInput.addEventListener('change', render);
-render();
 </script>
 </body>
 </html>
