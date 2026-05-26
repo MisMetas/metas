@@ -249,6 +249,30 @@ button{
   border-radius:14px;
 }
 
+
+.mood-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin-top:10px;
+}
+
+.mood-btn{
+  background:#f3f4f6;
+  color:#111827;
+  font-size:14px;
+  padding:12px 8px;
+  border-radius:14px;
+  border:2px solid transparent;
+  width:100%;
+}
+
+.mood-btn.active{
+  background:#dbeafe;
+  color:#1d4ed8;
+  border-color:#2563eb;
+}
+
 .hidden{
   display:none;
 }
@@ -352,6 +376,11 @@ button{
     border-radius:7px;
   }
 
+  .mood-btn{
+    font-size:13px;
+    padding:10px 6px;
+  }
+
   button{
     font-size:14px;
     padding:12px;
@@ -424,6 +453,44 @@ button{
       <div id="smartSummary" class="quote small"></div>
     </div>
 
+    <div class="card">
+      <strong>Mis 3 prioridades de hoy</strong>
+      <p class="small">Define las 3 cosas más importantes que quieres lograr.</p>
+
+      <input id="priority1" type="text" placeholder="Prioridad 1">
+      <br><br>
+      <input id="priority2" type="text" placeholder="Prioridad 2">
+      <br><br>
+      <input id="priority3" type="text" placeholder="Prioridad 3">
+    </div>
+
+    <div class="card">
+      <strong>Estado de ánimo</strong>
+      <p class="small">Selecciona cómo te sientes hoy.</p>
+
+      <div class="mood-grid">
+        <button type="button" class="mood-btn" data-mood="😊 Bien">😊 Bien</button>
+        <button type="button" class="mood-btn" data-mood="😐 Normal">😐 Normal</button>
+        <button type="button" class="mood-btn" data-mood="😔 Bajo">😔 Bajo</button>
+        <button type="button" class="mood-btn" data-mood="🔥 Motivado">🔥 Motivado</button>
+        <button type="button" class="mood-btn" data-mood="🙏 Agradecido">🙏 Agradecido</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <strong>Gratitud / oración / reflexión</strong>
+      <p class="small">Un espacio para registrar lo más importante de tu día.</p>
+
+      <label>Hoy agradezco por:</label>
+      <textarea id="gratitude" placeholder="Escribe algo por lo que das gracias..."></textarea>
+
+      <label>Petición de oración:</label>
+      <textarea id="prayer" placeholder="Escribe una petición o carga que quieras presentar en oración..."></textarea>
+
+      <label>Versículo o reflexión:</label>
+      <textarea id="reflection" placeholder="Escribe un versículo, pensamiento o aprendizaje espiritual..."></textarea>
+    </div>
+
     <div id="sections"></div>
   </div>
 
@@ -474,6 +541,7 @@ const provider = new GoogleAuthProvider();
 
 let currentUser = null;
 let allEntries = {};
+let selectedMood = "";
 
 const categories = [
   { id:'habitos', title:'Hábitos personales', placeholder:'Agua, lectura, orden, disciplina...' },
@@ -617,6 +685,33 @@ function render(){
 
   const saved = getData(dateInput.value);
 
+  document.getElementById('priority1').value = saved.priorities?.[0] || '';
+  document.getElementById('priority2').value = saved.priorities?.[1] || '';
+  document.getElementById('priority3').value = saved.priorities?.[2] || '';
+
+  document.getElementById('gratitude').value = saved.gratitude || '';
+  document.getElementById('prayer').value = saved.prayer || '';
+  document.getElementById('reflection').value = saved.reflection || '';
+
+  selectedMood = saved.mood || '';
+
+  document.querySelectorAll('.mood-btn').forEach(btn => {
+    btn.classList.toggle(
+      'active',
+      btn.dataset.mood === selectedMood
+    );
+
+    btn.onclick = () => {
+      selectedMood = btn.dataset.mood;
+
+      document.querySelectorAll('.mood-btn').forEach(b => {
+        b.classList.remove('active');
+      });
+
+      btn.classList.add('active');
+    };
+  });
+
   sections.innerHTML = categories.map(cat => `
     <div class="card">
 
@@ -668,6 +763,19 @@ window.saveDay = async function(){
       ).value.trim()
     };
   });
+
+
+  data.priorities = [
+    document.getElementById('priority1').value.trim(),
+    document.getElementById('priority2').value.trim(),
+    document.getElementById('priority3').value.trim()
+  ];
+
+  data.mood = selectedMood;
+
+  data.gratitude = document.getElementById('gratitude').value.trim();
+  data.prayer = document.getElementById('prayer').value.trim();
+  data.reflection = document.getElementById('reflection').value.trim();
 
   data.savedAt = new Date().toISOString();
 
@@ -848,11 +956,27 @@ function makeSummary(date){
     }
   });
 
+  const priorities = data.priorities || [];
+
+  const completedPriorities = priorities.filter(item => {
+    return item && item.trim() !== '';
+  }).length;
+
+  const moodText = data.mood
+    ? `<br><br>Estado de ánimo registrado: <b>${data.mood}</b>.`
+    : '';
+
+  const priorityText = completedPriorities > 0
+    ? `<br><br>Tienes ${completedPriorities} prioridad(es) definida(s) para este día.`
+    : `<br><br>Aún no has definido tus prioridades principales.`;
+
   if(p === 0){
 
     return `
       Todavía no has registrado progreso para este día.
       Empieza con una sola área y guarda tu avance.
+      ${priorityText}
+      ${moodText}
     `;
   }
 
@@ -862,6 +986,8 @@ function makeSummary(date){
       Tu progreso está bajo.
       Áreas que puedes reforzar:
       <b>${weak.slice(0,3).join(', ')}</b>.
+      ${priorityText}
+      ${moodText}
     `;
   }
 
@@ -871,12 +997,16 @@ function makeSummary(date){
       Buen avance.
       Te faltan algunas áreas para cerrar el día:
       <b>${weak.slice(0,3).join(', ')}</b>.
+      ${priorityText}
+      ${moodText}
     `;
   }
 
   return `
     Excelente día.
     Estás manteniendo buen balance entre tus áreas.
+    ${priorityText}
+    ${moodText}
   `;
 }
 
