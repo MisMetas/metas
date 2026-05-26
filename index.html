@@ -1,247 +1,15 @@
-<!doctype html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#111827">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Mi Agenda">
-<title>Mi Agenda Personal</title>
-
-<style>
-:root{
-  --bg:#f5f7fb;
-  --card:#ffffff;
-  --text:#111827;
-  --muted:#6b7280;
-  --primary:#2563eb;
-  --green:#22c55e;
-  --yellow:#f59e0b;
-  --red:#ef4444;
-  --soft:#e0ecff;
-}
-*{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  background:linear-gradient(160deg,#eef4ff,#f9fafb);
-  color:var(--text);
-}
-.app{
-  max-width:850px;
-  margin:auto;
-  padding:20px 14px 100px;
-}
-.header{
-  background:linear-gradient(135deg,#111827,#2563eb);
-  color:white;
-  padding:24px;
-  border-radius:28px;
-  box-shadow:0 18px 40px rgba(0,0,0,.18);
-}
-.header h1{margin:0;font-size:28px}
-.header p{margin:8px 0 0;color:#dbeafe}
-.grid{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:12px;
-}
-.card{
-  background:var(--card);
-  border-radius:22px;
-  padding:16px;
-  margin-top:14px;
-  box-shadow:0 8px 24px rgba(15,23,42,.08);
-}
-.auth-card{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:12px;
-  flex-wrap:wrap;
-}
-.stat{
-  background:white;
-  border-radius:20px;
-  padding:16px;
-  box-shadow:0 8px 24px rgba(15,23,42,.08);
-}
-.stat h2{margin:0;font-size:26px}
-.stat p{margin:4px 0 0;color:var(--muted);font-size:14px}
-label{font-weight:700;display:block;margin-bottom:8px}
-input,textarea{
-  width:100%;
-  border:1px solid #d1d5db;
-  border-radius:16px;
-  padding:13px;
-  font-size:16px;
-  background:#fff;
-}
-textarea{height:90px;resize:vertical}
-.category-title{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-}
-.badge{
-  background:var(--soft);
-  color:var(--primary);
-  padding:5px 10px;
-  border-radius:999px;
-  font-size:13px;
-  font-weight:800;
-}
-.progress{
-  height:12px;
-  background:#e5e7eb;
-  border-radius:999px;
-  overflow:hidden;
-}
-.progress div{
-  height:100%;
-  width:0%;
-  background:linear-gradient(90deg,#2563eb,#22c55e);
-}
-.calendar{
-  display:grid;
-  grid-template-columns:repeat(7,1fr);
-  gap:7px;
-}
-.day{
-  aspect-ratio:1;
-  border-radius:12px;
-  border:0;
-  font-weight:800;
-  background:#e5e7eb;
-  color:#111827;
-}
-.day.active{outline:3px solid #2563eb}
-.day.green{background:#bbf7d0}
-.day.yellow{background:#fde68a}
-.day.red{background:#fecaca}
-.small{color:var(--muted);font-size:14px}
-.actions{
-  position:fixed;
-  left:0;
-  right:0;
-  bottom:0;
-  padding:12px 16px 22px;
-  background:rgba(245,247,251,.9);
-  backdrop-filter:blur(12px);
-}
-.actions-inner{
-  max-width:850px;
-  margin:auto;
-  display:flex;
-  gap:10px;
-}
-button{
-  border:0;
-  border-radius:16px;
-  padding:14px;
-  font-size:16px;
-  font-weight:800;
-  cursor:pointer;
-}
-.primary{flex:1;background:var(--primary);color:white}
-.secondary{background:#e5e7eb;color:#111827}
-.danger{background:#fee2e2;color:#991b1b}
-.quote{
-  background:#f8fafc;
-  border-left:5px solid var(--primary);
-  padding:12px;
-  border-radius:14px;
-}
-.hidden{display:none}
-@media(max-width:620px){
-  .grid{grid-template-columns:1fr 1fr}
-}
-</style>
-</head>
-
-<body>
-<div class="app">
-
-  <div class="header">
-    <h1>Mi Agenda Personal</h1>
-    <p>Dashboard, hábitos, espiritualidad, trabajo, ejercicio y vida personal.</p>
-  </div>
-
-  <div id="authArea" class="card auth-card">
-    <div>
-      <strong>Conecta tu cuenta</strong>
-      <p class="small">Inicia sesión para guardar y sincronizar tu agenda con Firebase.</p>
-    </div>
-    <button class="primary" onclick="login()">Entrar con Google</button>
-  </div>
-
-  <div id="mainApp" class="hidden">
-    <div class="card">
-      <label>Selecciona el día</label>
-      <input id="date" type="date">
-    </div>
-
-    <div class="grid">
-      <div class="stat">
-        <h2 id="todayPercent">0%</h2>
-        <p>Progreso de hoy</p>
-      </div>
-      <div class="stat">
-        <h2 id="streak">0</h2>
-        <p>Días consecutivos</p>
-      </div>
-      <div class="stat">
-        <h2 id="weekPercent">0%</h2>
-        <p>Promedio semanal</p>
-      </div>
-      <div class="stat">
-        <h2 id="monthDays">0</h2>
-        <p>Días registrados este mes</p>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="category-title">
-        <strong>Progreso del día</strong>
-        <span id="percent" class="badge">0%</span>
-      </div>
-      <br>
-      <div class="progress"><div id="bar"></div></div>
-    </div>
-
-    <div class="card">
-      <strong>Calendario visual</strong>
-      <p class="small">Verde = completo, amarillo = parcial, rojo = bajo progreso.</p>
-      <div id="calendar" class="calendar"></div>
-    </div>
-
-    <div class="card">
-      <strong>Resumen inteligente</strong>
-      <div id="smartSummary" class="quote small"></div>
-    </div>
-
-    <div id="sections"></div>
-  </div>
-
-</div>
-
-<div id="actions" class="actions hidden">
-  <div class="actions-inner">
-    <button class="danger" onclick="clearDay()">Limpiar</button>
-    <button class="primary" onclick="saveDay()">Guardar día</button>
-  </div>
-</div>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+
 import {
   getFirestore,
   collection,
@@ -286,11 +54,15 @@ const percent = document.getElementById('percent');
 
 window.login = async function(){
   try{
-    await signInWithPopup(auth, provider);
+    await signInWithRedirect(auth, provider);
   }catch(error){
     alert("No se pudo iniciar sesión: " + error.message);
   }
 };
+
+getRedirectResult(auth).catch(error => {
+  alert("Error al regresar del login: " + error.message);
+});
 
 window.logout = async function(){
   await signOut(auth);
@@ -300,6 +72,7 @@ onAuthStateChanged(auth, async user => {
   currentUser = user;
 
   if(user){
+
     document.getElementById("authArea").innerHTML = `
       <div>
         <strong>Cuenta conectada</strong>
@@ -307,22 +80,34 @@ onAuthStateChanged(auth, async user => {
       </div>
       <button class="secondary" onclick="logout()">Cerrar sesión</button>
     `;
+
     document.getElementById("mainApp").classList.remove("hidden");
     document.getElementById("actions").classList.remove("hidden");
 
     dateInput.value = dateInput.value || today();
+
     await loadAllEntries();
+
     render();
+
   }else{
+
     allEntries = {};
+
     document.getElementById("mainApp").classList.add("hidden");
     document.getElementById("actions").classList.add("hidden");
+
     document.getElementById("authArea").innerHTML = `
       <div>
         <strong>Conecta tu cuenta</strong>
-        <p class="small">Inicia sesión para guardar y sincronizar tu agenda con Firebase.</p>
+        <p class="small">
+          Inicia sesión para guardar y sincronizar tu agenda con Firebase.
+        </p>
       </div>
-      <button class="primary" onclick="login()">Entrar con Google</button>
+
+      <button class="primary" onclick="login()">
+        Entrar con Google
+      </button>
     `;
   }
 });
@@ -336,21 +121,38 @@ function getData(date){
 }
 
 async function saveData(date,data){
+
   if(!currentUser){
     alert("Primero inicia sesión con Google.");
     return;
   }
 
-  const ref = doc(db, "users", currentUser.uid, "entries", date);
+  const ref = doc(
+    db,
+    "users",
+    currentUser.uid,
+    "entries",
+    date
+  );
+
   await setDoc(ref, data, { merge:true });
+
   allEntries[date] = data;
 }
 
 async function loadAllEntries(){
+
   if(!currentUser) return;
 
   allEntries = {};
-  const ref = collection(db, "users", currentUser.uid, "entries");
+
+  const ref = collection(
+    db,
+    "users",
+    currentUser.uid,
+    "entries"
+  );
+
   const snap = await getDocs(ref);
 
   snap.forEach(item => {
@@ -359,7 +161,9 @@ async function loadAllEntries(){
 }
 
 function getPercent(date){
+
   const data = getData(date);
+
   let done = 0;
 
   categories.forEach(c => {
@@ -370,13 +174,18 @@ function getPercent(date){
 }
 
 function render(){
+
   dateInput.value = dateInput.value || today();
+
   const saved = getData(dateInput.value);
 
   sections.innerHTML = categories.map(cat => `
     <div class="card">
+
       <div class="category-title">
+
         <label>${cat.title}</label>
+
         <input
           type="checkbox"
           id="check_${cat.id}"
@@ -384,8 +193,14 @@ function render(){
           onchange="updateProgress()"
           style="width:auto"
         >
+
       </div>
-      <textarea id="text_${cat.id}" placeholder="${cat.placeholder}">${saved[cat.id]?.text || ''}</textarea>
+
+      <textarea
+        id="text_${cat.id}"
+        placeholder="${cat.placeholder}"
+      >${saved[cat.id]?.text || ''}</textarea>
+
     </div>
   `).join('');
 
@@ -395,98 +210,168 @@ function render(){
 }
 
 window.saveDay = async function(){
+
   if(!currentUser){
     alert("Primero inicia sesión con Google.");
     return;
   }
 
   const data = {};
+
   categories.forEach(cat => {
+
     data[cat.id] = {
-      done: document.getElementById('check_' + cat.id).checked,
-      text: document.getElementById('text_' + cat.id).value.trim()
+      done: document.getElementById(
+        'check_' + cat.id
+      ).checked,
+
+      text: document.getElementById(
+        'text_' + cat.id
+      ).value.trim()
     };
   });
 
   data.savedAt = new Date().toISOString();
 
   try{
+
     await saveData(dateInput.value, data);
+
     updateProgress();
     updateDashboard();
     renderCalendar();
-    alert('Día guardado correctamente en Firebase.');
+
+    alert('Día guardado correctamente.');
+
   }catch(error){
+
     alert("No se pudo guardar: " + error.message);
   }
 };
 
 window.updateProgress = function(){
+
   let done = 0;
 
   categories.forEach(cat => {
-    const check = document.getElementById('check_' + cat.id);
+
+    const check = document.getElementById(
+      'check_' + cat.id
+    );
+
     if(check && check.checked) done++;
   });
 
-  const value = Math.round((done / categories.length) * 100);
+  const value = Math.round(
+    (done / categories.length) * 100
+  );
+
   bar.style.width = value + '%';
+
   percent.textContent = value + '%';
-  document.getElementById('todayPercent').textContent = value + '%';
+
+  document.getElementById(
+    'todayPercent'
+  ).textContent = value + '%';
 };
 
 window.clearDay = async function(){
+
   if(!currentUser){
     alert("Primero inicia sesión con Google.");
     return;
   }
 
   if(confirm('¿Quieres borrar la información de este día?')){
+
     try{
-      const ref = doc(db, "users", currentUser.uid, "entries", dateInput.value);
+
+      const ref = doc(
+        db,
+        "users",
+        currentUser.uid,
+        "entries",
+        dateInput.value
+      );
+
       await deleteDoc(ref);
+
       delete allEntries[dateInput.value];
+
       render();
+
     }catch(error){
+
       alert("No se pudo borrar: " + error.message);
     }
   }
 };
 
 function updateDashboard(){
+
   const selected = dateInput.value;
+
   const todayP = getPercent(selected);
 
-  document.getElementById('todayPercent').textContent = todayP + '%';
-  document.getElementById('streak').textContent = calculateStreak();
-  document.getElementById('weekPercent').textContent = calculateWeekAverage(selected) + '%';
-  document.getElementById('monthDays').textContent = countMonthEntries(selected);
-  document.getElementById('smartSummary').innerHTML = makeSummary(selected);
+  document.getElementById(
+    'todayPercent'
+  ).textContent = todayP + '%';
+
+  document.getElementById(
+    'streak'
+  ).textContent = calculateStreak();
+
+  document.getElementById(
+    'weekPercent'
+  ).textContent = calculateWeekAverage(selected) + '%';
+
+  document.getElementById(
+    'monthDays'
+  ).textContent = countMonthEntries(selected);
+
+  document.getElementById(
+    'smartSummary'
+  ).innerHTML = makeSummary(selected);
 }
 
 function calculateWeekAverage(date){
+
   const base = new Date(date + 'T00:00:00');
+
   let total = 0;
 
   for(let i = 0; i < 7; i++){
+
     const d = new Date(base);
+
     d.setDate(base.getDate() - i);
-    total += getPercent(d.toISOString().slice(0,10));
+
+    total += getPercent(
+      d.toISOString().slice(0,10)
+    );
   }
 
   return Math.round(total / 7);
 }
 
 function calculateStreak(){
+
   let streak = 0;
+
   let d = new Date(today() + 'T00:00:00');
 
   while(true){
+
     const iso = d.toISOString().slice(0,10);
+
     if(getPercent(iso) >= 60){
+
       streak++;
+
       d.setDate(d.getDate() - 1);
+
     }else{
+
       break;
     }
   }
@@ -495,10 +380,13 @@ function calculateStreak(){
 }
 
 function countMonthEntries(date){
+
   const month = date.slice(0,7);
+
   let count = 0;
 
   Object.keys(allEntries).forEach(entryDate => {
+
     if(entryDate.startsWith(month)){
       count++;
     }
@@ -508,59 +396,105 @@ function countMonthEntries(date){
 }
 
 function makeSummary(date){
+
   const data = getData(date);
+
   const p = getPercent(date);
+
   const weak = [];
 
   categories.forEach(c => {
-    if(!data[c.id]?.done) weak.push(c.title);
+
+    if(!data[c.id]?.done){
+      weak.push(c.title);
+    }
   });
 
   if(p === 0){
-    return 'Todavía no has registrado progreso para este día. Empieza con una sola área y guarda tu avance.';
+
+    return `
+      Todavía no has registrado progreso para este día.
+      Empieza con una sola área y guarda tu avance.
+    `;
   }
 
   if(p < 50){
-    return 'Tu progreso está bajo. Áreas que puedes reforzar: <b>' + weak.slice(0,3).join(', ') + '</b>.';
+
+    return `
+      Tu progreso está bajo.
+      Áreas que puedes reforzar:
+      <b>${weak.slice(0,3).join(', ')}</b>.
+    `;
   }
 
   if(p < 85){
-    return 'Buen avance. Te faltan algunas áreas para cerrar el día con más balance: <b>' + weak.slice(0,3).join(', ') + '</b>.';
+
+    return `
+      Buen avance.
+      Te faltan algunas áreas para cerrar el día:
+      <b>${weak.slice(0,3).join(', ')}</b>.
+    `;
   }
 
-  return 'Excelente día. Estás manteniendo buen balance entre tus áreas personales, espirituales, trabajo y salud.';
+  return `
+    Excelente día.
+    Estás manteniendo buen balance entre tus áreas.
+  `;
 }
 
 function renderCalendar(){
-  const calendar = document.getElementById('calendar');
-  const date = new Date(dateInput.value + 'T00:00:00');
+
+  const calendar = document.getElementById(
+    'calendar'
+  );
+
+  const date = new Date(
+    dateInput.value + 'T00:00:00'
+  );
+
   const year = date.getFullYear();
+
   const month = date.getMonth();
-  const days = new Date(year, month + 1, 0).getDate();
+
+  const days = new Date(
+    year,
+    month + 1,
+    0
+  ).getDate();
 
   calendar.innerHTML = '';
 
   for(let i = 1; i <= days; i++){
-    const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+
+    const iso = `${year}-${String(
+      month + 1
+    ).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+
     const p = getPercent(iso);
 
     let color = '';
+
     if(p >= 85) color = 'green';
     else if(p >= 40) color = 'yellow';
     else if(p > 0) color = 'red';
 
     const btn = document.createElement('button');
-    btn.className = `day ${color} ${iso === dateInput.value ? 'active' : ''}`;
+
+    btn.className = `
+      day ${color}
+      ${iso === dateInput.value ? 'active' : ''}
+    `;
+
     btn.textContent = i;
+
     btn.onclick = () => {
       dateInput.value = iso;
       render();
     };
+
     calendar.appendChild(btn);
   }
 }
 
 dateInput.addEventListener('change', render);
 </script>
-</body>
-</html>
