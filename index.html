@@ -510,9 +510,12 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithRedirect,
+  signInWithPopup,
   getRedirectResult,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
 import {
@@ -539,6 +542,14 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
+provider.setCustomParameters({
+  prompt: "select_account"
+});
+
+setPersistence(auth, browserLocalPersistence).catch(error => {
+  console.warn("No se pudo activar persistencia local:", error);
+});
+
 let currentUser = null;
 let allEntries = {};
 let selectedMood = "";
@@ -558,9 +569,33 @@ const sections = document.getElementById('sections');
 const bar = document.getElementById('bar');
 const percent = document.getElementById('percent');
 
+function isMobileDevice(){
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
+
 window.login = async function(){
   try{
-    await signInWithRedirect(auth, provider);
+    await setPersistence(auth, browserLocalPersistence);
+
+    if(isMobileDevice()){
+      await signInWithRedirect(auth, provider);
+      return;
+    }
+
+    try{
+      await signInWithPopup(auth, provider);
+    }catch(popupError){
+      if(
+        popupError.code === "auth/popup-closed-by-user" ||
+        popupError.code === "auth/cancelled-popup-request" ||
+        popupError.code === "auth/popup-blocked"
+      ){
+        await signInWithRedirect(auth, provider);
+      }else{
+        throw popupError;
+      }
+    }
+
   }catch(error){
     alert("No se pudo iniciar sesión: " + error.message);
   }
